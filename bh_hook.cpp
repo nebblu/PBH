@@ -16,7 +16,7 @@ double nbl_hook(double  lgni, double lambda, double lgmass){
 
 	double hub3 = eostm * pow(hubble2, 3./2.); // 1/s^3
 
-	double chempot = 9.*lambda*eostm* (hub3/pow(10.,2.*lgmp));
+	double chempot = 9.*lambda * (hub3/pow(10.,2.*lgmp));
 
 	double qfac = 13 * chempot * dect / 96 / M_PI * pow(dstgev/kgtgev,2);
 	double nbh = pow(10.,lgni) * pow(dmtgev,3.); // BH number density in gev
