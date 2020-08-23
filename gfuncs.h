@@ -26,6 +26,7 @@ double hubble(double om, double orad, double a){
 	return h0 * sqrt(om/a3+ orad/a4 + ol);
 }
 
+
 // Reheating time as a function of temperature --- Trh should be given in Kelvin
 double timeofrh(double Trh){
 	return sqrt(5./pow(M_PI,3)/gstar) * pow(10,lgmp)/pow(Trh*keltgev,2) *kgtgev / gevtds ;
@@ -105,8 +106,93 @@ double bhmasslg(double lgm, double a, bool rem){
 	}
 }
 
+
+/* Log10 of Mass spectrum in units 1/kg */
+// hi mass - Eq.2.5 of draft
+//  Psi = 10^psihilg   as a function of Log10[M] = lgm and omega_pbh
+double psihilg(double lgm, double opbh){
+	double fpbh = opbh/oc;
+	return -12.2764 + log10(fpbh) - 3./2. * lgm;
+}
+
+// low mass - Eq.2.2 of draft
+//  Psi = 10^psilowlg  as a function of Log10[M] = lgm and peak mass
+double psilowlg(double lgm, double peakm){
+	double aofmf = (peakm+2.723)/(-0.6576);
+	double expt = 2.85*(lgm-peakm);
+	return 2.85*(aofmf + lgm) - pow(10,expt)/2.3026;
+}
+
+// full spectrum - polychromatic
+// Psi = 10^psibroadlg as a function of Log10[M] = lgm and peak mass
+double psibroadlg(double lgm, double peakm){
+	//  if mass is less than planck mass, set to 0
+	if(lgmp - lgm>0){
+		 return -100.;
+		}
+	// if above peak mass, set to hi spectrum
+	else if(lgm-peakm>0){
+		return psihilg(lgm,oc);
+		}
+	//  if below peak mass, set to low spectrum
+	else{
+		return psilowlg(lgm,peakm);
+	}
+}
+
+
+/* Calculate normalisation for psibroad */
+// normalisation integrand --- see equation 3.4 for example
+// Params are peak mass, time of reheating (unused) and scale factor
+// Normalisation = 1/ Integrate[ 10^psilg dM ] =   1/ Integrate[ 10^(psilg + lgm) x Ln[10] dlgm ]
+
+double normlg_int(double lgm, void * params) {
+	myparam_type pars = *(myparam_type *)(params);
+	double peakm = pars.peakm;
+	double trh = pars.trh;
+	double a = pars.aval;
+	bool rem = pars.rem;
+	double lgbhm = bhmasslg(lgm,a, rem);
+	double expt = lgm + psibroadlg(lgbhm,peakm);
+	double integrand =pow(10.,expt);
+  return integrand;
+}
+
+// Normalisation = 10^normlg
+double normlg(double peakm, double a, bool rem){
+	struct myparam_type pars = {peakm, 1., a, rem};
+
+	gsl_integration_workspace * w  = gsl_integration_workspace_alloc (1000);
+	double result, error;
+	gsl_function F;
+	F.function = &normlg_int;
+	F.params = &pars;
+	gsl_integration_qags (&F, lgmp, lgmax, 0, 1e-7, 1000, w, &result, &error);
+  gsl_integration_workspace_free (w);
+
+  // Log10[1/Ln[10]] = -0.362216
+	return -0.362216 - log10(result);
+}
+
+
+
 // calculate volume fration given number density
 double epsilon(double lgni, double lgmass){
 	double radius = 2.*pow(10.,lgmass)/pow(10.,lgmp*2.) /kgtgev;
 	return pow(10.,lgni) * 4. * M_PI * pow(radius,3) / 3.  * pow(dmtgev,3);
+}
+
+/* Entropy density */
+// Temperature given in Kelvin
+double entropy(double Trh,  double  a){
+	return 2.*pow(M_PI,2)/45 * gstar * pow(Trh*keltgev*ai/a,3.);
+}
+
+
+// absolute maximum theoretical number density
+// Some notes: A bh of mass 10^-5.96 kg has a volume of 1.76 x 10^-98 m^3  and so we can have number densities mathematically up to 10^98 x 0.74 where 0.74 is the close packing ratio (max ratio of cube to volume of packed spheres)
+double maxn0(double  lgmass){
+	double rsch = 2.*gnewton*pow(10.,lgmass)/pow(sofl,2); // schwarzschild radius in m
+	double volume =4./3. * M_PI * pow(rsch,3);
+	return 1./volume * 0.74;
 }

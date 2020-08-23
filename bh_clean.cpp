@@ -163,15 +163,6 @@ double yieldbl(double Trh, double nbl, double a){
 
 
 
-// absolute maximum theoretical number density
-// Some notes: A bh of mass 10^-5.96 kg has a volume of 1.76 x 10^-98 m^3  and so we can have number densities mathematically up to 10^98 x 0.74 where 0.74 is the close packing ratio (max ratio of cube to volume of packed spheres)
-double maxn0(double  lgmass){
-	double rsch = 2.*gnewton*pow(10.,lgmass)/pow(sofl,2); // schwarzschild radius in m
-	double volume =4./3. * M_PI * pow(rsch,3);
-	return 1./volume * 0.74;
-}
-
-
 int main(int argc, char* argv[]) {
 /* Our LCDM background calculations  */
 // create spline of a(t)
