@@ -113,7 +113,7 @@ struct myparam_type2{
 	bool rem; // remnants or not
 	gsl_spline *spline;
 	gsl_interp_accel *acc;
-};
+} ;
 
 // Reduced structure for epoch/approximate calculations
 struct myparam_type{

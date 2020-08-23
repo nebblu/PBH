@@ -1,6 +1,7 @@
 
 #include <constants.h>
 #include <gfuncs.h>
+#include <clean.h>
 
 
 //Final, normalised log10 of broad spectrum
