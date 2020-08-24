@@ -180,7 +180,7 @@ double myep, trh, arh, Trh, afin, lgn0, omegabhh, nbl, omegabar, myy;
 double lgmass = 12.; // -7.67 < lgmass < 36
 double lgni = 39.48 ; // -100(none) < lgni < 98 (max from sphere-in-cube fitting problem if planck  mass avg)
 double lambda =  pow(10.,73)/4./3; // any value
-double Trhgev = pow(10.,17.);  // 10 < Trh < 10^24  GeV https://medium.com/predict/linking-cosmic-inflation-and-the-big-bang-with-reheating-period-1eb3f81526a1
+double Trhgev = pow(10.,10.);  // 10 < Trh < 10^24  GeV https://medium.com/predict/linking-cosmic-inflation-and-the-big-bang-with-reheating-period-1eb3f81526a1
 
 
 std::cout<< "Maximum number density: " << maxn0(lgmass) << std::endl;
@@ -194,7 +194,7 @@ std::cout<< "" << std::endl;
 Trh = Trhgev/keltgev;
 // reheating time can't be before inflation - bound on temperature
 // set reheating time
-trh = timeofa(ai);//timeofrh(Trh); // reheating time
+trh = timeofrh(Trh); // reheating time
 arh = gsl_spline_eval (myspline, trh, acc); // reheating scale factor
 std::cout<< "Reheating Temperature [K]:  " << Trh << std::endl;
 std::cout<< "Reheating Temperature [GeV]:  " << Trhgev << std::endl;
@@ -206,7 +206,7 @@ std::cout<< "" << std::endl;
 
 afin = acmb;
 std::cout << "Results at CMB  " << std::endl;
-bool rem = true; // remnants or not
+bool rem = false; // remnants or not
 lgn0 = 3.*log10(ai)  + lgni; // number density today
 omegabhh = omegapbh(lgn0, lgmass, afin, rem); // bh density fraction at CMB
 struct myparam_type2 pars = {-lambda,lgn0,lgmass,Trh,trh, afin,rem,myspline,acc};
@@ -216,33 +216,35 @@ omegabar =  omegab(nbl,  afin); // baryon density fraction at CMB
 std::cout << "BH number density today:  " << pow(10.,lgn0) << std::endl;
 std::cout << "BH density at CMB:  " << omegabhh << std::endl;
 std::cout << "CDM density at CMB: " << omegalcdm(oc, afin) << std::endl;
+
+std::cout << "" << std::endl;
 std::cout <<  "Baryon density at CMB:  " << omegabar << std::endl;
 std::cout << "Baryon density at CMB: " << omegalcdm(ob, afin) << std::endl;
 
-
-myy = yieldbl(Trh, nbl, afin);
-std::cout <<  "Yield at CMB :  " << myy << std::endl;
-std::cout << "" << std::endl;
-
-
-
-afin = 0.999;
-std::cout << "Results today  " << std::endl;
-omegabhh = omegapbh(lgn0, lgmass, afin, rem); // bh density fraction at CMB
-
-struct myparam_type2 pars2 = {-lambda,lgn0,lgmass,Trh,trh, afin,rem,myspline,acc};
-nbl = nbl_lcdm(&pars2);
-omegabar =  omegab(nbl,afin); // baryon density fraction at CMB
-
-std::cout << "BH number density today:  " << pow(10.,lgn0) << std::endl;
-std::cout << "BH density today:  " << omegabhh << std::endl;
-std::cout << "CDM density today: " << omegalcdm(oc, afin) << std::endl;
-std::cout <<  "Baryon density today:  " << omegabar << std::endl;
-std::cout << "Baryon density today: " << omegalcdm(ob, afin) << std::endl;
+//
+// myy = yieldbl(Trh, nbl, afin);
+// std::cout <<  "Yield at CMB :  " << myy << std::endl;
+// std::cout << "" << std::endl;
+//
 
 
-myy = yieldbl(Trh,nbl,afin);
-std::cout <<  "Yield today :  " << myy << std::endl;
+// afin = 0.999;
+// std::cout << "Results today  " << std::endl;
+// omegabhh = omegapbh(lgn0, lgmass, afin, rem); // bh density fraction at CMB
+//
+// struct myparam_type2 pars2 = {-lambda,lgn0,lgmass,Trh,trh, afin,rem,myspline,acc};
+// nbl = nbl_lcdm(&pars2);
+// omegabar =  omegab(nbl,afin); // baryon density fraction at CMB
+//
+// std::cout << "BH number density today:  " << pow(10.,lgn0) << std::endl;
+// std::cout << "BH density today:  " << omegabhh << std::endl;
+// std::cout << "CDM density today: " << omegalcdm(oc, afin) << std::endl;
+// std::cout <<  "Baryon density today:  " << omegabar << std::endl;
+// std::cout << "Baryon density today: " << omegalcdm(ob, afin) << std::endl;
+//
+//
+// myy = yieldbl(Trh,nbl,afin);
+// std::cout <<  "Yield today :  " << myy << std::endl;
 
 return 0;
 }

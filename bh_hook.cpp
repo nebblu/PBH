@@ -14,6 +14,8 @@ double nbl_hook(double  lgni, double lambda, double lgmass){
 	double rhobh = pow(10.,lgni+lgmass);
 	double hubble2 = 8.*M_PI*gnewton/3. * rhobh;
 
+		printf("%e \n", sqrt(hubble2));
+
 	double hub3 = eostm * pow(hubble2, 3./2.); // 1/s^3
 
 	double chempot = 9.*lambda * (hub3/pow(10.,2.*lgmp));
