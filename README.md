@@ -23,4 +23,8 @@ The codes are written in C++, so you'll need a relatively modern C++ compiler.
 ### GSL
 The code also makes use of [gsl](http://www.gnu.org/software/gsl/). You will need to have a version of gsl installed (gsl 2. or later) needed for integrations of the mass spectrum. 
 
+## Citation
 
+We ask if you use this code or any development thereof,  that you cite the following paper for which the original code was written 
+
+< add bib >
