@@ -153,9 +153,9 @@ double omegab(double nbl, double a){
 
 /* Yield */
 // Trh in  Kelvin and  nbl  in m^-3
-double yieldbl(double Trh, double nbl, double a){
+double yieldbl(double Trh, double nbl, double a, double arh){
 	// entropy density in GeV^3
-	double s = entropy(Trh, a);
+	double s = entropy(Trh, a, arh);
 	// nbl density converted to GeV^3
 	double nblv = pow(dmtgev,3)*nbl;
 	// yield - unitless
@@ -166,7 +166,14 @@ double yieldbl(double Trh, double nbl, double a){
 
 int main(int argc, char* argv[]) {
 /* Our LCDM background calculations  */
-// create spline of a(t)
+
+/* Set key parameters */
+
+double lgpeak = 11.7;//-6.30103; // log10 of mass function peak in kg
+bool rem = false; // remnants or not
+double Trhgev = pow(10.,15);  // reheating temperature 1 < Trh < 10^24
+
+/* create spline of a(t) */
 arrays_T myxxyy = (arrays_T)malloc( sizeof(struct arrays) );
 // populate array
 aoftime(myxxyy);
@@ -174,131 +181,89 @@ aoftime(myxxyy);
 gsl_interp_accel *acc = gsl_interp_accel_alloc ();
 gsl_spline *myspline    = gsl_spline_alloc (gsl_interp_cspline, 1002);
 gsl_spline_init (myspline, (*myxxyy).xx, (*myxxyy).yy, 1002);
-double myep, trh, arh, Trh, afin, lgn0, omegabhh, nbl, omegabar, myy;
 
-
-double lgmass = 12.; // -7.67 < lgmass < 36
-double lgni = 39.48 ; // -100(none) < lgni < 98 (max from sphere-in-cube fitting problem if planck  mass avg)
-double lambda =  pow(10.,73)/4./3; // any value
-double Trhgev = pow(10.,10.);  // 10 < Trh < 10^24  GeV https://medium.com/predict/linking-cosmic-inflation-and-the-big-bang-with-reheating-period-1eb3f81526a1
-
-
-std::cout<< "Maximum number density: " << maxn0(lgmass) << std::endl;
-std::cout<< "" << std::endl;
-
-myep = epsilon(lgni, lgmass);
-std::cout<< "Epsilon x lambda: " << myep*lambda << std::endl;
-std::cout<< "" << std::endl;
-
+double  myep, trh, arh, Trh, lgn0, lgncmb, lgni, omegabh, nbl, omegabar, yield, avgmass, cdmfrac, barfrac, lambda;
 
 Trh = Trhgev/keltgev;
-// reheating time can't be before inflation - bound on temperature
-// set reheating time
 trh = timeofrh(Trh); // reheating time
 arh = gsl_spline_eval (myspline, trh, acc); // reheating scale factor
-std::cout<< "Reheating Temperature [K]:  " << Trh << std::endl;
+
+/* Set number density and lambda to match CMB observations */
+
+avgmass = log10(avgm(lgpeak, acmb , rem));
+/*  What number density gives thhe correct PBH fraction at CMB (= CDM fraction) */
+cdmfrac = omegalcdm(oc, acmb);
+lgni = log10(cdmfrac*rhoc(acmb)) + 3.*(log10(acmb)-log10(ai)) - avgmass; // -100(none) < lgni < 98 (max from sphere-in-cube fitting problem if planck  mass avg)
+lgncmb = lgni + 3.*(log10(ai)-log10(acmb)); // number density at acmb
+lgn0 = lgni + 3.*log10(ai); // number density today
+
+
+// Take lambda to be the value needed by CMB Omega_b constraint and chosen T_RH
+lambda =  1.;
+struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,acmb,rem,myspline,acc};
+
+nbl = nbl_lcdm(&pars);
+omegabar =  omegab(nbl,  acmb); // baryon density fraction at CMB
+barfrac = omegalcdm(ob, acmb);
+
+/* reset lambda to needed value */
+lambda = barfrac/omegabar;
+
+/* Volume fraction of bH at CMB */
+myep = epsilon(lgncmb, avgmass);
+
+/* Parameter output */
+std::cout<< "Log10 peak mass :  " << lgpeak << std::endl;
+std::cout<< "Remnants?  " << rem << std::endl;
 std::cout<< "Reheating Temperature [GeV]:  " << Trhgev << std::endl;
 std::cout<< "Reheating time:  " << trh << std::endl;
 std::cout<< "Reheating scale factor:  " << arh << std::endl;
 std::cout<< "" << std::endl;
-
-
-
-afin = acmb;
-std::cout << "Results at CMB  " << std::endl;
-bool rem = false; // remnants or not
-lgn0 = 3.*log10(ai)  + lgni; // number density today
-omegabhh = omegapbh(lgn0, lgmass, afin, rem); // bh density fraction at CMB
-struct myparam_type2 pars = {-lambda,lgn0,lgmass,Trh,trh, afin,rem,myspline,acc};
-nbl = nbl_lcdm(&pars);
-omegabar =  omegab(nbl,  afin); // baryon density fraction at CMB
-
+std::cout<< "Number density at initial time : " << pow(10,lgni) << std::endl;
+std::cout<< "Number density at CMB : " << pow(10,lgncmb) << std::endl;
+std::cout<< "Maximum number density at CMB: " << maxn0(avgmass) << std::endl;
 std::cout << "BH number density today:  " << pow(10.,lgn0) << std::endl;
-std::cout << "BH density at CMB:  " << omegabhh << std::endl;
-std::cout << "CDM density at CMB: " << omegalcdm(oc, afin) << std::endl;
-
-std::cout << "" << std::endl;
-std::cout <<  "Baryon density at CMB:  " << omegabar << std::endl;
-std::cout << "Baryon density at CMB: " << omegalcdm(ob, afin) << std::endl;
-
-//
-// myy = yieldbl(Trh, nbl, afin);
-// std::cout <<  "Yield at CMB :  " << myy << std::endl;
-// std::cout << "" << std::endl;
-//
+std::cout<< "" << std::endl;
+std::cout<< "lambda: " << lambda << std::endl;
+std::cout<< "volume fraction epsilon at CMB: " << myep << std::endl;
+std::cout<< "Epsilon x lambda at CMB: " << myep*lambda << std::endl;
+std::cout<< "" << std::endl;
 
 
-// afin = 0.999;
-// std::cout << "Results today  " << std::endl;
-// omegabhh = omegapbh(lgn0, lgmass, afin, rem); // bh density fraction at CMB
-//
-// struct myparam_type2 pars2 = {-lambda,lgn0,lgmass,Trh,trh, afin,rem,myspline,acc};
-// nbl = nbl_lcdm(&pars2);
-// omegabar =  omegab(nbl,afin); // baryon density fraction at CMB
-//
-// std::cout << "BH number density today:  " << pow(10.,lgn0) << std::endl;
-// std::cout << "BH density today:  " << omegabhh << std::endl;
-// std::cout << "CDM density today: " << omegalcdm(oc, afin) << std::endl;
-// std::cout <<  "Baryon density today:  " << omegabar << std::endl;
-// std::cout << "Baryon density today: " << omegalcdm(ob, afin) << std::endl;
-//
-//
-// myy = yieldbl(Trh,nbl,afin);
-// std::cout <<  "Yield today :  " << myy << std::endl;
 
-return 0;
+/* Output to file */
+const char* output = "data/peakm_5e11.dat";
+FILE* fp = fopen(output, "w");
+int nout = 100; // number of linearly spaced output points
+
+double ainit = 1e-6; // initial scale factor to start output
+double afin = 1.; // final scale factor
+
+for(int i=0; i< nout; i++){
+	/* MASS FUNCTION */
+	//double lgmass = lgmp + i*(lgmax-lgmp)/(nout-1.); //lgmp * exp(i*log(lgmax/lgmp)/(nout-1.));
+	//double p1 = psifinallg(lgmass, lgpeak, afin, rem);
+	// printf("%e %e  \n", lgmass, p1);
+	// fprintf(fp,"%e %e  \n", lgmass, p1);
+
+	/* Density fractions and Yield  */
+	double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	omegabh = omegapbh(lgn0, lgpeak, scalef, rem); // bh density fraction
+
+	struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,scalef,rem,myspline,acc};
+
+	nbl = nbl_lcdm(&pars);
+	omegabar =  omegab(nbl,  scalef); // baryon density fraction at CMB
+
+	yield = yieldbl(Trh, nbl, scalef, arh);
+
+	printf("%e %e %e %e   \n", scalef, omegabh, omegabar, yield);
+	fprintf(fp,"%e %e %e %e \n", scalef, omegabh, omegabar, yield);
 }
 
 
-
-// double p1,p2,p3,p4,p5,p6;
-// const char* output = "myoutput.dat";
-// FILE* fp = fopen(output, "w");
-//
-// double lgn0,peakm,lam;
-// // number of time points to output
-// double amax =1.;
-// double amin = acmb;
-// double amax0 =acmb;
-// double amin0 = ai;
-// int na = 100;
-// bool rem = false;
-//
-//
-//   std::cout<<normlg(15, 0.1) << std::endl;
-// 	std::cout<< pow(10,psifinallg(20, 20, 0.1, false)) << std::endl;
-// 	std::cout<< avgm(0., 0.001, false) << std::endl;
-
-
-
-//
-// lgn0 = -62.01; // log10 of number density
-// peakm = lgmf; // log10 of peak mass
-// std::cout << omegapbh(lgn0, peakm, acmb)/0.695 << std::endl;
-// lam = -1e60;
-// //std::cout << Trh << std::endl;
-// struct myparam_type2 pars = {lam,lgn0,peakm,trh,acmb,myspline,acc};
-// std::cout << omegab(&pars)/0.129 << std::endl;
-//
-// struct myparam_type2 pars1 = {lam,lgn0,peakm,trh,1,myspline,acc};
-// double ppar = yieldbl(&pars);
-// std::cout << ppar << std::endl;
-
-
-// for(int i=0; i<na; i++){
-// 	double a = amin * exp(i*log(amax/amin)/(na-1));
-//
-// 		printf("%e %e %e %e  \n", a, p1,p2,p3);
-//  		fprintf(fp,"%e %e %e %e \n",a, p1, p2, p3);
-//  }
-
-// free spline objects
-// gsl_spline_free (myspline);
-// free(myxxyy);
-// gsl_interp_accel_free (acc);
-
-/*close output file*/
- //fclose(fp);
+return 0;
+}
 
 
 

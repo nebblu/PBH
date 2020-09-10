@@ -79,7 +79,6 @@ double bhmasslg(double lgm, double a, bool rem){
 double normlg_int(double lgm, void * params) {
 	myparam_type pars = *(myparam_type *)(params);
 	double peakm = pars.peakm;
-	double trh = pars.trh;
 	double a = pars.aval;
 	bool rem = pars.rem;
 	double lgbhm = bhmasslg(lgm,a, rem);

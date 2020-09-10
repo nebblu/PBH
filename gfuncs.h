@@ -17,7 +17,7 @@
 #include <gsl/gsl_integration.h>
 #include <gsl/gsl_spline.h>
 
-// Common functions to all  .cpps 
+// Common functions to all  .cpps
 
 
 /* LCDM Hubble in 1/s */
@@ -82,14 +82,15 @@ double psibroadlg(double lgm, double peakm){
 
 // calculate volume fration given number density
 double epsilon(double lgni, double lgmass){
-	double radius = 2.*pow(10.,lgmass)/pow(10.,lgmp*2.) /kgtgev;
-	return pow(10.,lgni) * 4. * M_PI * pow(radius,3) / 3.  * pow(dmtgev,3);
+	double radius = 2. * gnewton * pow(10,lgmass)/pow(sofl,2);
+	printf("%e \n", radius);
+	return pow(10.,lgni) * 4. * M_PI * pow(radius,3) / 3.;
 }
 
 /* Entropy density */
 // Temperature given in Kelvin
-double entropy(double Trh,  double  a){
-	return 2.*pow(M_PI,2)/45 * gstar * pow(Trh*keltgev*ai/a,3.);
+double entropy(double Trh,  double  a, double arh){
+	return 2.*pow(M_PI,2)/45 * gstar * pow(Trh*keltgev*arh/a,3.);
 }
 
 // absolute maximum theoretical number density
