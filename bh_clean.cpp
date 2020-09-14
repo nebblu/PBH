@@ -76,6 +76,7 @@ double nbl_int_lcdm(double lgm, void * params){
 	// final time
 	double af = gsl_min(deca,a);
 
+
 	// the result of integrating H^3((1+w)(1-3w)+w') actually has very short analytic result: -h0^2 Omega_m/(3a^3)
 	//as well as conversion of Hubble^3 to kg and dt to 1/kg
 	double hubint =  pow(h0,2) * om * (pow(af,3)-pow(arh,3))/(3.*pow(af*arh,3)); // integral in units of h0 = 1/s^2
@@ -169,9 +170,9 @@ int main(int argc, char* argv[]) {
 
 /* Set key parameters */
 
-double lgpeak = 11.7;//-6.30103; // log10 of mass function peak in kg
+double lgpeak = 13.;//-6.30103; // log10 of mass function peak in kg
 bool rem = false; // remnants or not
-double Trhgev = pow(10.,15);  // reheating temperature 1 < Trh < 10^24
+double Trhgev = pow(10.,10);  // reheating temperature 1 < Trh < 10^24
 
 /* create spline of a(t) */
 arrays_T myxxyy = (arrays_T)malloc( sizeof(struct arrays) );
@@ -228,11 +229,16 @@ std::cout<< "lambda: " << lambda << std::endl;
 std::cout<< "volume fraction epsilon at CMB: " << myep << std::endl;
 std::cout<< "Epsilon x lambda at CMB: " << myep*lambda << std::endl;
 std::cout<< "" << std::endl;
-
+std::cout<< "" << std::endl;
+std::cout<< "" << std::endl;
+std::cout<< "Temp x scale factor @ reheating:" << arh *  Trh << std::endl;
+std::cout<< "" << std::endl;
+std::cout<< "" << std::endl;
+std::cout<< "" << std::endl;
 
 
 /* Output to file */
-const char* output = "data/peakm_5e11.dat";
+const char* output = "data/nbl_1e13.dat";
 FILE* fp = fopen(output, "w");
 int nout = 100; // number of linearly spaced output points
 
@@ -247,7 +253,7 @@ for(int i=0; i< nout; i++){
 	// fprintf(fp,"%e %e  \n", lgmass, p1);
 
 	/* Density fractions and Yield  */
-	double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	 double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
 	omegabh = omegapbh(lgn0, lgpeak, scalef, rem); // bh density fraction
 
 	struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,scalef,rem,myspline,acc};
@@ -259,6 +265,8 @@ for(int i=0; i< nout; i++){
 
 	printf("%e %e %e %e   \n", scalef, omegabh, omegabar, yield);
 	fprintf(fp,"%e %e %e %e \n", scalef, omegabh, omegabar, yield);
+
+
 }
 
 

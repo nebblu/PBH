@@ -48,8 +48,8 @@ const double oc = 0.265;
 const double ob = 0.0494;
 // Total matter fraction from Planck 2018
 const double om = oc+ob;
-// Radiation fraction from Planck 2018
-const double orad = 0.00006;
+// Radiation fraction from Planck 2018 + massless neutrinos
+const double orad = 0.00009236;//0.00006;
 // Yield of B-L = n_B-L/ entropy density
 const double yield = 1e-9;
 // Hooks value for yield 1404.0113
