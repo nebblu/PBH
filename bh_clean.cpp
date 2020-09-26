@@ -7,20 +7,27 @@
 //Final, normalised log10 of broad spectrum
 double psifinallg(double lgm, double peakm, double a,  bool rem){
 		//  Log10[M(t)]
-		double lgmoft = bhmasslg(lgm,a,rem);
-		double expt = psibroadlg(lgmoft, peakm) + normlg(peakm, a, rem) ;
+		// Psi(a, (Mi^3 - 3Kt)^1/3)  = Psi(Mi)
+		double expt = psibroadlg(lgm, peakm) + normlg(peakm, a, rem) ;
+
 		return expt;
 }
 
 // Average mass
 double avgm_int(double lgm, void * params){
 	myparam_type pars = *(myparam_type *)(params);
+
 	double peakm = pars.peakm;
 	double a = pars.aval;
 	bool rem = pars.rem;
-	double expt = 2.*lgm +  psifinallg(lgm, peakm, a, rem);
+
+	double lgmf =  bhmasslg(lgm,a,rem);
+
+	double expt = lgmf + lgm +  psifinallg(lgm, peakm, ai, rem);
+
 	return pow(10.,expt);
 }
+
 
 // average mass (see avgm_int function) in kg
 double avgm(double peakm, double a, bool rem){
@@ -30,10 +37,20 @@ double avgm(double peakm, double a, bool rem){
 	gsl_function F;
 	F.function = &avgm_int;
 	F.params = &pars;
-	gsl_integration_qags (&F, lgmp, lgmax, 0, 1e-7, 1000, w, &result, &error);
+
+	double lgmaximum = bhmasslg(lgmax,a,rem);
+	double logdect = 1./3. * (17.803 + log10(timeofa(a)));
+	double lgminimum = gsl_max(lgmp, logdect);
+
+	gsl_integration_qags (&F, lgminimum, lgmaximum, 0, 1e-7, 1000, w, &result, &error);
 	gsl_integration_workspace_free (w);
 	return intf * result ;
 }
+
+
+
+
+
 
 
 /* LCDM background treatment */
@@ -170,9 +187,9 @@ int main(int argc, char* argv[]) {
 
 /* Set key parameters */
 
-double lgpeak = 13.;//-6.30103; // log10 of mass function peak in kg
-bool rem = false; // remnants or not
-double Trhgev = pow(10.,10);  // reheating temperature 1 < Trh < 10^24
+double lgpeak = log10(5e13); // log10 of mass function peak in kg
+bool rem = true; // remnants or not
+double Trhgev = pow(10.,8);  // reheating temperature 1 < Trh < 10^24
 
 /* create spline of a(t) */
 arrays_T myxxyy = (arrays_T)malloc( sizeof(struct arrays) );
@@ -204,7 +221,7 @@ lambda =  1.;
 struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,acmb,rem,myspline,acc};
 
 nbl = nbl_lcdm(&pars);
-omegabar =  omegab(nbl,  acmb); // baryon density fraction at CMB
+omegabar = omegab(nbl,  acmb); // baryon density fraction at CMB
 barfrac = omegalcdm(ob, acmb);
 
 /* reset lambda to needed value */
@@ -237,23 +254,37 @@ std::cout<< "" << std::endl;
 std::cout<< "" << std::endl;
 
 
-/* Output to file */
-const char* output = "data/nbl_1e13.dat";
-FILE* fp = fopen(output, "w");
-int nout = 100; // number of linearly spaced output points
 
-double ainit = 1e-6; // initial scale factor to start output
+double avgmassi = avgm(lgpeak, ai , rem);
+double avgmassf = avgm(lgpeak, acmb , rem);
+double bhloss = pow(10.,lgn0)*(avgmassi - avgmassf);
+double bargain = nbl * protonm /2. * pow(acmb,3) ;
+std::cout << " energy lost by BH" << bhloss << std::endl;
+std::cout << " energy gained by baryons" << bargain << std::endl;
+std::cout << "Difference " << bhloss-bargain << std::endl;
+std::cout << "Minimum radiation energy density @ z=0 is " << (bhloss-bargain)/rhoc(1.) << std::endl;
+
+
+/* Output to file */
+const char* output = "data/peakm_5e13_rem.dat";
+FILE* fp = fopen(output, "w");
+int nout = 300; // number of linearly spaced output points
+
+double ainit = arh;//1e-6; // initial scale factor to start output
 double afin = 1.; // final scale factor
 
 for(int i=0; i< nout; i++){
 	/* MASS FUNCTION */
-	//double lgmass = lgmp + i*(lgmax-lgmp)/(nout-1.); //lgmp * exp(i*log(lgmax/lgmp)/(nout-1.));
-	//double p1 = psifinallg(lgmass, lgpeak, afin, rem);
+	// double lgmass = lgmp + i*(lgmax-lgmp)/(nout-1.); //lgmp * exp(i*log(lgmax/lgmp)/(nout-1.));
+	// double p1 = psifinallg(lgmass, lgpeak, ai, rem);
 	// printf("%e %e  \n", lgmass, p1);
 	// fprintf(fp,"%e %e  \n", lgmass, p1);
 
 	/* Density fractions and Yield  */
-	 double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	// double avgmi = avgm(lgmass, ai , rem);
+	// double avgmf = avgm(lgmass, acmb , rem);
+
 	omegabh = omegapbh(lgn0, lgpeak, scalef, rem); // bh density fraction
 
 	struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,scalef,rem,myspline,acc};
@@ -263,9 +294,11 @@ for(int i=0; i< nout; i++){
 
 	yield = yieldbl(Trh, nbl, scalef, arh);
 
-	printf("%e %e %e %e   \n", scalef, omegabh, omegabar, yield);
-	fprintf(fp,"%e %e %e %e \n", scalef, omegabh, omegabar, yield);
+	printf("%e %e %e %e %e %e   \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
+	fprintf(fp,"%e %e %e %e %e %e \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
 
+	 // printf("%e %e %e %e \n", lgmass, avgmi,avgmf, avgmi-avgmf);
+	 // fprintf(fp,"%e %e %e \n", lgmass, avgmi,avgmf);
 
 }
 

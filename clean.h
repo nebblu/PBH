@@ -58,17 +58,36 @@ double bhmasslg(double lgm, double a, bool rem){
 	// If M_i^3 <= 3 K M_p^4 t  then the black hole should have  0 mass ---> Log10[M_i] <= 1/3 (Log10[ 3 K M_p^4] + Log10[t]) = 1/3 ( 17.803 + Log10[t])
 	double logdect = 1./3. * (17.803 + log10(timeofa(a)));
 	if (lgm>logdect) {
-		return log10(pow(pow(10, lgm*3) - decfac*timeofa(a), 1.0/3));
+		return log10(pow(pow(10., lgm*3.) - decfac*timeofa(a), 1.0/3.));
 	}
 	else{
 		if (!rem) {
-			return -100;
+			return -100.;
 		}
 		else{
 			return lgmp;
 		}
 	}
 }
+
+
+// Initial mass from final mass. Any bh that has decayed completely earlier than a will be mapped to decfac*timeofa(a)^(1/3)
+// (There's no way of knowing with certainty what its initial mass is if its final mass is 0)
+double bhmasslgi(double lgm, double a, bool rem){
+  double logdect = 1./3. * (17.803 + log10(timeofa(a)));
+  double mymasslg = log10(pow(10., lgm*3.) + decfac*timeofa(a))/3.;
+  if(lgm<logdect ){
+    return -100;
+  }
+  else if(mymasslg>lgmax){
+		return -100;
+    }
+  else{
+    return mymasslg;
+  }
+}
+
+
 
 
 /* Calculate normalisation for psibroad */

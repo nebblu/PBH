@@ -49,9 +49,9 @@ const double ob = 0.0494;
 // Total matter fraction from Planck 2018
 const double om = oc+ob;
 // Radiation fraction from Planck 2018 + massless neutrinos
-const double orad = 0.00009236;//0.00006;
+const double orad = 9.2367e-5;//0.00006;
 // Yield of B-L = n_B-L/ entropy density
-const double yield = 1e-9;
+const double yield = 1e-10;
 // Hooks value for yield 1404.0113
 const double yieldhook = 9e-11;
 
@@ -67,7 +67,7 @@ const double mplanck = 2.176e-8;
 // log10 of planck mass (in kg)
 const double lgmp = -7.66234;
 // log10 of maximum mass used in integrations in kg
-const double lgmax = 36.;
+const double lgmax =36.;
 // horizon mass in kg at time of radiation-matter equality --- 2001.04371
 const double meq = 2.8e17;
 // Horizon mass when shortest wavelength reenters horizon - choice
