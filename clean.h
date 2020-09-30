@@ -98,26 +98,21 @@ double bhmasslgi(double lgm, double a, bool rem){
 double normlg_int(double lgm, void * params) {
 	myparam_type pars = *(myparam_type *)(params);
 	double peakm = pars.peakm;
-	double a = pars.aval;
-	bool rem = pars.rem;
-	double lgbhm = bhmasslg(lgm,a, rem);
-	double expt = lgm + psibroadlg(lgbhm,peakm);
+	double expt = lgm + psibroadlg(lgm,peakm);
 	double integrand =pow(10.,expt);
   return integrand;
 }
 
 // Normalisation = 10^normlg
-double normlg(double peakm, double a, bool rem){
-	struct myparam_type pars = {peakm, 1., a, rem};
+double normlg(double peakm){
+	struct myparam_type pars = {peakm, 1., ai, false};
 
 	gsl_integration_workspace * w  = gsl_integration_workspace_alloc (1000);
 	double result, error;
 	gsl_function F;
 	F.function = &normlg_int;
 	F.params = &pars;
-	gsl_integration_qags (&F, lgmp, lgmax, 0, 1e-7, 1000, w, &result, &error);
+	gsl_integration_qags (&F, lgmp, lgmax, 1e-10, 1e-10, 1000, w, &result, &error);
   gsl_integration_workspace_free (w);
-
-  // Log10[1/Ln[10]] = -0.362216
-	return -0.362216 - log10(result);
+	return  log10(1./(log(10.)*result));
 }

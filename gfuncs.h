@@ -65,11 +65,11 @@ double psilowlg(double lgm, double peakm){
 // Psi = 10^psibroadlg as a function of Log10[M] = lgm and peak mass
 double psibroadlg(double lgm, double peakm){
 	//  if mass is less than planck mass, set to 0
-	if(lgmp - lgm>0){
+	if(lgmp>lgm){
 		 return -100.;
 		}
 	// if above peak mass, set to hi spectrum
-	else if(lgm-peakm>0){
+	else if(lgm>peakm){
 		return psihilg(lgm,oc);
 		}
 	//  if below peak mass, set to low spectrum
