@@ -10,7 +10,14 @@ double psifinallg(double lgm, double peakm){
 		return expt;
 }
 
-// Average mass
+//Final, normalised log10 of monochromatic spectrum
+double psifinallg_mono(double lgm, double peakm){
+		double expt = psilowlg(lgm, peakm) + normlg_mono(peakm) ;
+		return expt;
+}
+
+
+// Average mass for broad mass spectrum
 double avgm_int(double lgm, void * params){
 	myparam_type pars = *(myparam_type *)(params);
 
@@ -25,21 +32,57 @@ double avgm_int(double lgm, void * params){
 	return pow(10.,expt);
 }
 
+// Average mass for monochromatic mass spectrum
+double avgm_int_mono(double lgm, void * params){
+	myparam_type pars = *(myparam_type *)(params);
+
+	double peakm = pars.peakm;
+	double a = pars.aval;
+	bool rem = pars.rem;
+
+	double lgmf =  bhmasslg(lgm,a,rem);
+
+	double expt = lgmf + lgm +  psifinallg_mono(lgm, peakm);
+
+	return pow(10.,expt);
+}
+
 
 // average mass (see avgm_int function) in kg
-double avgm(double peakm, double a, bool rem){
+// mono chooses broad or monochromatic spectrum
+// Note: The broad spectrum should only be used post a = a_BBN ~ 5e-10 given our maximum mass (1e36)
+double avgm(double peakm, double a, bool rem, bool mono){
 	struct myparam_type pars = {peakm, 1., a, rem};
 	gsl_integration_workspace * w  = gsl_integration_workspace_alloc (1000);
 	double result, error;
 	gsl_function F;
-	F.function = &avgm_int;
+
+
+	// maximum mass for monochromatic is not so relevant because of the sharp fall off
+	// maximum mass for broad depends on the epoch under consideration - we use equation 2.3 to get a rough estimate up until BBN
+	double lgmaximum;
+	double time = timeofa(a);
+
+	if (mono) {
+		F.function = &avgm_int_mono;
+		lgmaximum = bhmasslg(lgmax,a,rem);
+	}
+	else{
+		F.function = &avgm_int;
+		if (time>10) {
+			lgmaximum = bhmasslg(lgmax,a,rem);
+		}
+		else{
+		  lgmaximum = 1e35 * time;
+		}
+	}
 	F.params = &pars;
 
-	double lgmaximum = bhmasslg(lgmax,a,rem);
+	// minimum mass
 	double logdect = 1./3. * (17.803 + log10(timeofa(a)));
 	double lgminimum = gsl_max(lgmp, logdect);
 
-	gsl_integration_qags (&F, lgminimum, lgmaximum, 0, 1e-7, 1000, w, &result, &error);
+	gsl_integration_qags (&F, lgminimum, lgmaximum, 0, 1e-5, 1000, w, &result, &error);
 	gsl_integration_workspace_free (w);
 	return intf * result ;
 }
@@ -59,6 +102,7 @@ double nbl_int_lcdm(double lgm, void * params){
 	bool rem = pars.rem;
 	gsl_spline *myaoft = pars.spline;
 	gsl_interp_accel *acc = pars.acc;
+  bool mono = pars.mono;
 
 	// determine the decay time
 	double dect = pow(10., (3.*lgm-17.803));
@@ -79,9 +123,20 @@ double nbl_int_lcdm(double lgm, void * params){
 		deca = gsl_spline_eval (myaoft, dect, acc);
 	}
 
-	// We start integrating after reheating
+	// We start integrating after reheating if we consider a monochromatic spectrum
+	// If it is a broad spectrum, the PBH are only all created at the start of BBN so we must use ~10s
+	double tinitial;
+	double ainitial;
+	if (mono) {
+		tinitial = 10.;
+	}
+	else{
+		tinitial = trh;
+	}
 	// reheating scale factor
-	double arh = gsl_spline_eval (myaoft, trh, acc);
+	ainitial = gsl_spline_eval (myaoft, tinitial, acc);
+
+
 
 	// We stop integrating when BH has decayed  or we reach the target time
 	// final time
@@ -90,7 +145,7 @@ double nbl_int_lcdm(double lgm, void * params){
 
 	// the result of integrating H^3((1+w)(1-3w)+w') actually has very short analytic result: -h0^2 Omega_m/(3a^3)
 	//as well as conversion of Hubble^3 to kg and dt to 1/kg
-	double hubint =  pow(h0,2) * om * (pow(af,3)-pow(arh,3))/(3.*pow(af*arh,3)); // integral in units of h0 = 1/s^2
+	double hubint =  pow(h0,2) * om * (pow(af,3)-pow(ainitial,3))/(3.*pow(af*ainitial,3)); // integral in units of h0 = 1/s^2
 
 	double planck2ds = pow(10.,2.*lgmp)*pow(kgtgev*gevtds,2); // planck mass ^2 in 1/s^2
 
@@ -99,11 +154,19 @@ double nbl_int_lcdm(double lgm, void * params){
 	double qbl = (sumq2g/96./M_PI) * chempot; // unitless
 
 	// psi term
-	double exptpsi = psifinallg(lgm, peakm);
+	double exptpsi;
+	if (mono) {
+		 exptpsi = psifinallg_mono(lgm, peakm);
+	}
+	else{
+	 	 exptpsi = psifinallg(lgm, peakm);
+	 }
+
 	double psi =  pow(10.,exptpsi); // units 1/kg
 
 	return  intf * psi * qbl; // units 1/kg
 }
+
 // Params:
 	// double lambda; // coupling constant - unitless
  	// double lgn0;  // Log10 of final total number density of bh in 1/m^3
@@ -114,7 +177,7 @@ double nbl_int_lcdm(double lgm, void * params){
 	// bool rem; // remnants or not
 	// gsl_spline *spline;
 	// gsl_interp_accel *acc;
-	// matd : True - includes initial matter domination, false - we exclude initial phase and begin integrating at end of reheating
+
 double nbl_lcdm(void * params){
 	myparam_type2 pars = *(myparam_type2 *)(params);
 	double peakm = pars.peakm;
@@ -122,7 +185,9 @@ double nbl_lcdm(void * params){
 	double trh = pars.trh;
 	double a = pars.aval;
 	bool rem = pars.rem;
-
+	bool mono = pars.mono;
+	gsl_spline *myaoft = pars.spline;
+	gsl_interp_accel *acc = pars.acc;
 	double time = timeofa(a);
 	// is time before reheating time? If yes, number density should be 0!
 	// can't create asymmetry before reheating
@@ -137,21 +202,43 @@ double nbl_lcdm(void * params){
 	gsl_function F;
 	F.function = &nbl_int_lcdm;
 	F.params = &pars;
-	gsl_integration_qags (&F, lgmp, lgmax, 0, 1e-7, 1000, w, &qpsiint, &error);
+
+
+	// maximum mass for monochromatic is not so relevant because of the sharp fall off
+	// maximum mass for broad depends on the epoch under consideration - we use equation 2.3 to get a rough estimate up until BBN
+	double lgmaximum;
+	double ainitial;
+	if (mono) {
+		lgmaximum = lgmax;
+		ainitial = ai;
+	}
+	else{
+		if (time>10.) {
+			lgmaximum = lgmax;
+			ainitial =gsl_spline_eval (myaoft, 10., acc);
+		}
+		else{
+		  lgmaximum = 1e35 * time;
+			ainitial =gsl_spline_eval (myaoft, time, acc);
+		}
+	}
+
+	gsl_integration_qags (&F, lgmp, lgmaximum, 0, 1e-5, 1000, w, &qpsiint, &error);
 	gsl_integration_workspace_free (w);
 
 	// average initial mass times number density today in kg/m^3
-	double mavgi = avgm(peakm, ai, rem);
+	double mavgi = avgm(peakm, ainitial, rem, mono);
 	double rhot =   pow(10.,lgn0) * mavgi / pow(a,3) ;
 
 	return rhot * qpsiint  ; // units of 1/m^3
 }
 
 
+
 /* Omega_pbh */
 // lgn0 = Log10[n0] where n0 is the number density of bh today
-double omegapbh(double lgn0, double peakm, double a, bool rem){
-	double avgmass = avgm(peakm, a, rem);
+double omegapbh(double lgn0, double peakm, double a, bool rem, bool mono){
+	double avgmass = avgm(peakm, a, rem, mono);
 	return  pow(10.,lgn0) * avgmass / (rhoc(a) * pow(a,3.));
 }
 
@@ -181,9 +268,15 @@ int main(int argc, char* argv[]) {
 
 /* Set key parameters */
 
-double lgpeak = log10(1e5); // log10 of mass function peak in kg
+double lgpeak = log10(5e10); // log10 of mass function peak in kg
 bool rem = false; // remnants or not
+bool mono = false;
 double Trhgev = pow(10.,8);  // reheating temperature 1 < Trh < 10^24
+
+/* Output to file */
+const char* output = "data/peakm_5e10.dat";
+FILE* fp = fopen(output, "w");
+
 
 /* create spline of a(t) */
 arrays_T myxxyy = (arrays_T)malloc( sizeof(struct arrays) );
@@ -202,7 +295,7 @@ arh = gsl_spline_eval (myspline, trh, acc); // reheating scale factor
 
 /* Set number density and lambda to match CMB observations */
 
-avgmass = log10(avgm(lgpeak, acmb , rem));
+avgmass = log10(avgm(lgpeak, acmb , rem, mono));
 /*  What number density gives thhe correct PBH fraction at CMB (= CDM fraction) */
 cdmfrac = omegalcdm(oc, acmb);
 lgni = log10(cdmfrac*rhoc(acmb)) + 3.*(log10(acmb)-log10(ai)) - avgmass; // -100(none) < lgni < 98 (max from sphere-in-cube fitting problem if planck  mass avg)
@@ -212,7 +305,7 @@ lgn0 = lgni + 3.*log10(ai); // number density today
 
 // Take lambda to be the value needed by CMB Omega_b constraint and chosen T_RH
 lambda =  1.;
-struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,acmb,rem,myspline,acc};
+struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,acmb,rem,myspline,acc, mono};
 
 nbl = nbl_lcdm(&pars);
 omegabar = omegab(nbl,  acmb); // baryon density fraction at CMB
@@ -246,8 +339,8 @@ std::cout<< "Temp x scale factor @ reheating:" << arh *  Trh << std::endl;
 std::cout<< "" << std::endl;
 std::cout<< "" << std::endl;
 
-double avgmassi = avgm(lgpeak, ai , rem);
-double avgmassf = avgm(lgpeak, acmb , rem);
+double avgmassi = avgm(lgpeak, ai , rem, mono);
+double avgmassf = avgm(lgpeak, acmb , rem, mono);
 double bhloss = pow(10.,lgn0)*(avgmassi - avgmassf);
 double bargain = nbl * protonm /2. * pow(acmb,3) ;
 std::cout << " energy lost by BH" << bhloss << std::endl;
@@ -257,56 +350,58 @@ std::cout << "Minimum radiation energy density @ z=0 is " << (bhloss-bargain)/rh
 
 std::cout<< "" << std::endl;
 std::cout<< "" << std::endl;
-std::cout<< "Time of matter/radiation equality:  " << gsl_spline_eval (myspline, 10, acc)  << std::endl;
+std::cout<< "Time of matter/radiation equality:  " << gsl_spline_eval (myspline, 10., acc)  << std::endl;
 
 
-/* Output to file */
-const char* output = "data/massspec_peak_1e5.dat";
-FILE* fp = fopen(output, "w");
-int nout = 10000; // number of linearly spaced output points
+int nout = 100; // number of linearly spaced output points
 
-double ainit = arh;//1e-6; // initial scale factor to start output
+double ainit = 1e-6;//1e-6; // initial scale factor to start output
 double afin = 1.; // final scale factor
 
 for(int i=0; i< nout; i++){
+
 	/* MASS FUNCTION */
-	double lgmass = lgmp + i*(lgmax-lgmp)/(nout-1.); //lgmp * exp(i*log(lgmax/lgmp)/(nout-1.));
-
-	double p1 = psifinallg(lgmass, lgpeak);
-
-	double p2 = psilowlg(lgmass,lgpeak);
-	double p3 = psihilg(lgmass, oc);
-
-	printf("%e %e %e %e  \n", lgmass, p1,p2,p3);
-	fprintf(fp,"%e %e %e %e  \n", lgmass, p1,p2,p3);
-
-	/* Density fractions and Yield  */
-	// double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	// double lgmass = lgmp + i*(lgmax-lgmp)/(nout-1.); //lgmp * exp(i*log(lgmax/lgmp)/(nout-1.));
 	//
-	// omegabh = omegapbh(lgn0, lgpeak, scalef, rem); // bh density fraction
+	// double p1 = psifinallg(lgmass, lgpeak);
 	//
-	// struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,scalef,rem,myspline,acc};
+	// double p2 = psifinallg_mono(lgmass,lgpeak);
+	// double p3 = psihilg(lgmass, oc);
 	//
-	// nbl = nbl_lcdm(&pars);
-	// omegabar =  omegab(nbl,  scalef); // baryon density fraction at CMB
-	//
-	// yield = yieldbl(Trh, nbl, scalef, arh);
-	//
-	// printf("%e %e %e %e %e %e   \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
-	// fprintf(fp,"%e %e %e %e %e %e \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
+	// printf("%e %e %e %e  \n", lgmass, p1,p2,p3);
+	// fprintf(fp,"%e %e %e %e  \n", lgmass, p1,p2,p3);
 
 	/* Average Mass */
-	// double avgmi = avgm(lgmass, ai , rem);
-	// double avgmf = avgm(lgmass, acmb , rem);
+	// double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+	// double avgmm = avgm(lgpeak, scalef , rem, true);
+	// double avgmb = avgm(lgpeak, scalef , rem, false);
+	//  printf("%e %e %e \n", scalef, avgmm, avgmb);
+	//  fprintf(fp,"%e %e %e \n", scalef, avgmm, avgmb);
 
-	 // printf("%e %e %e %e \n", lgmass, avgmi,avgmf, avgmi-avgmf);
-	 // fprintf(fp,"%e %e %e \n", lgmass, avgmi,avgmf);
+
+	/* Density fractions and Yield  */
+	double scalef = ainit* exp(i*log(afin/ainit)/(nout-1.));
+
+	omegabh = omegapbh(lgn0, lgpeak, scalef, rem, mono); // bh density fraction
+
+	struct myparam_type2 pars = {-lambda,lgn0,lgpeak,Trh,trh,scalef,rem,myspline,acc, mono};
+
+	nbl = nbl_lcdm(&pars);
+	omegabar =  omegab(nbl,  scalef); // baryon density fraction at CMB
+
+	yield = yieldbl(Trh, nbl, scalef, arh);
+
+	printf("%e %e %e %e %e %e   \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
+	fprintf(fp,"%e %e %e %e %e %e \n", scalef, omegabh, omegabar, yield, lambda, pow(10,lgn0));
+
 
 }
 
 
 return 0;
 }
+
+
 
 
 

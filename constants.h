@@ -56,7 +56,7 @@ const double yield = 1e-10;
 const double yieldhook = 9e-11;
 
 /* Scale factors */
-const double ai = 1e-30; // end  of inflation  ---- need to adjust
+const double ai = 1e-30; // starting factor ~ end of inflation  
 const double arad = 0.000264; // dm-rad equality
 const double acmb = 9e-4; // CMB
 const double alam = 0.5; // DM - Lambda equality
@@ -113,6 +113,7 @@ struct myparam_type2{
 	bool rem; // remnants or not
 	gsl_spline *spline;
 	gsl_interp_accel *acc;
+	bool mono; // monochromatic spectrum (true) or broad (false)
 } ;
 
 // Reduced structure for epoch/approximate calculations

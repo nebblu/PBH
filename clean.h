@@ -92,7 +92,7 @@ double bhmasslgi(double lgm, double a, bool rem){
 
 /* Calculate normalisation for psibroad */
 // normalisation integrand --- see equation 3.4 for example
-// Params are peak mass, time of reheating (unused) and scale factor
+// Params are peak mass (as proxy for M_s)
 // Normalisation = 1/ Integrate[ 10^psilg dM ] =   1/ Integrate[ 10^(psilg + lgm) x Ln[10] dlgm ]
 
 double normlg_int(double lgm, void * params) {
@@ -111,6 +111,35 @@ double normlg(double peakm){
 	double result, error;
 	gsl_function F;
 	F.function = &normlg_int;
+	F.params = &pars;
+	gsl_integration_qags (&F, lgmp, lgmax, 1e-10, 1e-10, 1000, w, &result, &error);
+  gsl_integration_workspace_free (w);
+	return  log10(1./(log(10.)*result));
+}
+
+
+
+/* Calculate normalisation for psi_mono */
+// normalisation integrand --- see equation 3.4 for example
+// Params are peak mass
+// Normalisation = 1/ Integrate[ 10^psilg dM ] =   1/ Integrate[ 10^(psilg + lgm) x Ln[10] dlgm ]
+
+double normlg_int_mono(double lgm, void * params) {
+	myparam_type pars = *(myparam_type *)(params);
+	double peakm = pars.peakm;
+	double expt = lgm + psilowlg(lgm,peakm);
+	double integrand =pow(10.,expt);
+  return integrand;
+}
+
+// Normalisation = 10^normlg
+double normlg_mono(double peakm){
+	struct myparam_type pars = {peakm, 1., ai, false};
+
+	gsl_integration_workspace * w  = gsl_integration_workspace_alloc (1000);
+	double result, error;
+	gsl_function F;
+	F.function = &normlg_int_mono;
 	F.params = &pars;
 	gsl_integration_qags (&F, lgmp, lgmax, 1e-10, 1e-10, 1000, w, &result, &error);
   gsl_integration_workspace_free (w);
