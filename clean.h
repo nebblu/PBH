@@ -112,7 +112,7 @@ double normlg(double peakm){
 	gsl_function F;
 	F.function = &normlg_int;
 	F.params = &pars;
-	gsl_integration_qags (&F, lgmp, lgmax, 1e-10, 1e-10, 1000, w, &result, &error);
+	gsl_integration_qags (&F, lgmp, lgmax, 0., 1e-5, 1000, w, &result, &error);
   gsl_integration_workspace_free (w);
 	return  log10(1./(log(10.)*result));
 }
@@ -141,7 +141,7 @@ double normlg_mono(double peakm){
 	gsl_function F;
 	F.function = &normlg_int_mono;
 	F.params = &pars;
-	gsl_integration_qags (&F, lgmp, lgmax, 1e-10, 1e-10, 1000, w, &result, &error);
+	gsl_integration_qags (&F, lgmp, lgmax, 0., 1e-5, 1000, w, &result, &error);
   gsl_integration_workspace_free (w);
 	return  log10(1./(log(10.)*result));
 }

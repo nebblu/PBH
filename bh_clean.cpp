@@ -69,7 +69,7 @@ double avgm(double peakm, double a, bool rem, bool mono){
 	}
 	else{
 		F.function = &avgm_int;
-		if (time>10) {
+		if (time>10.) {
 			lgmaximum = bhmasslg(lgmax,a,rem);
 		}
 		else{
@@ -82,7 +82,7 @@ double avgm(double peakm, double a, bool rem, bool mono){
 	double logdect = 1./3. * (17.803 + log10(timeofa(a)));
 	double lgminimum = gsl_max(lgmp, logdect);
 
-	gsl_integration_qags (&F, lgminimum, lgmaximum, 0, 1e-5, 1000, w, &result, &error);
+	gsl_integration_qags (&F, lgminimum, lgmaximum, 0., 1e-5, 1000, w, &result, &error);
 	gsl_integration_workspace_free (w);
 	return intf * result ;
 }
@@ -110,7 +110,7 @@ double nbl_int_lcdm(double lgm, void * params){
 	// time at which to stop integrating the charge, RHS of eq.14 of 1404.0113
 	double deca;
 	// so spline doesn't run into issues, set deca = 1 if the decay time exceeds lifetime of the (LCDM) universe....
-	if (dect>=1./hubble(om,orad,1)) {
+	if (dect>=1./hubble(om,orad,1.)) {
 		deca = 1.;
 	}
 	// if the decay time is less than the time of reheating we should return 0.
@@ -127,7 +127,7 @@ double nbl_int_lcdm(double lgm, void * params){
 	// If it is a broad spectrum, the PBH are only all created at the start of BBN so we must use ~10s
 	double tinitial;
 	double ainitial;
-	if (mono) {
+	if (!mono) {
 		tinitial = 10.;
 	}
 	else{
@@ -268,13 +268,13 @@ int main(int argc, char* argv[]) {
 
 /* Set key parameters */
 
-double lgpeak = log10(5e10); // log10 of mass function peak in kg
+double lgpeak = log10(1e12); // log10 of mass function peak in kg
 bool rem = false; // remnants or not
-bool mono = false;
+bool mono = true;
 double Trhgev = pow(10.,8);  // reheating temperature 1 < Trh < 10^24
 
 /* Output to file */
-const char* output = "data/peakm_5e10.dat";
+const char* output = "data/test.dat";
 FILE* fp = fopen(output, "w");
 
 
