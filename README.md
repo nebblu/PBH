@@ -27,4 +27,12 @@ The code also makes use of [gsl](http://www.gnu.org/software/gsl/). You will nee
 
 We ask if you use this code or any development thereof,  that you cite the following paper for which the original code was written 
 
-< add bib >
+>@article{Boudon:2020qpo,
+>    author = "Boudon, Alexis and Bose, Benjamin and Huang, Hyat and Lombriser, Lucas",
+>    title = "{Baryogenesis through Asymmetric Hawking Radiation from Primordial Black Holes as Dark Matter}",
+>    eprint = "2010.14426",
+>    archivePrefix = "arXiv",
+>    primaryClass = "astro-ph.CO",
+>    month = "10",
+>    year = "2020"
+>}
